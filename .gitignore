@@ -1,0 +1,15 @@
+# Python
+*.pyc
+__pycache__/
+.venv/
+
+# AWS & CloudFormation
+*.zip
+.serverless/
+
+# Env files
+.env
+
+# IDE / OS
+.DS_Store
+*.swp
