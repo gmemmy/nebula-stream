@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Nebula Stream Phase 1 - Raw Ingestion Infra
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment environment (e.g., dev, prod)
+  CryptoApiKey:
+    Type: String
+    Description: Cryptocurrency API key
+
+Resources:
+  NebulaStreamRawBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: "nebula-stream-raw-${Environment}-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+        
+    # SSM Parameter to store the crypto API key securely
+  NebulaStreamApiKeyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name:
+        Fn::Sub: "/nebula-stream/${Environment}/crypto-api-key"
+      Description: "NebulaStream cryptocurrency API key (SecureString)"
+      Type: String
+      Tier: Standard
+      DataType: text
+      Value: 
+        Ref: CryptoApiKey
+
+Outputs:
+  RawBucketName:
+    Description: Name of the raw data S3 bucket
+    Value: 
+      Ref: NebulaStreamRawBucket
+
+  ApiKeyParameterName:
+    Description: SSM parameter path for the crypto API key
+    Value: 
+      Ref: NebulaStreamApiKeyParameter
