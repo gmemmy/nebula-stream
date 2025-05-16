@@ -8,6 +8,9 @@ Parameters:
   CryptoApiKey:
     Type: String
     Description: Cryptocurrency API key
+  CryptoApiUrl:
+    Type: String
+    Description: Cryptocurrency API URL
   ArtifactsBucket:
     Type: String
     Description: S3 bucket where lambda code artifacts are stored
@@ -74,6 +77,12 @@ Resources:
                   - s3:PutObject
                 Resource:
                   Fn::Sub: "arn:aws:s3:::nebula-stream-raw-${Environment}-${AWS::AccountId}/*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*" 
                   
   FetchPriceFunction:
     Type: AWS::Lambda::Function
@@ -89,10 +98,14 @@ Resources:
           Ref: ArtifactsBucket
         S3Key:
           Ref: CodeS3Key
+      Timeout: 30
+      MemorySize: 128
       Environment:
         Variables:
           ENV: 
             Ref: Environment
+          CRYPTO_API_URL:
+            Ref: CryptoApiUrl
           RAW_BUCKET:
             Ref: NebulaStreamRawBucket
           SSM_PARAMETER:
