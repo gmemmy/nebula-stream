@@ -1,42 +1,60 @@
 # NebulaStream
 
-**NebulaStream** is a lightweight, serverless pipeline that fetches cryptocurrency price data at regular intervals and makes it available for ad-hoc analysis.
+NebulaStream is a serverless data pipeline that collects, processes, and analyzes cryptocurrency price data in real-time. Built on AWS, it provides a scalable and cost-effective solution for cryptocurrency market data analysis.
 
-## What’s being built
+## Overview
 
-1. **Phase 1: Raw Ingestion**
+The pipeline consists of three main phases:
 
-   * A Python AWS Lambda function polls a public crypto API every five minutes.
-   * Raw JSON price data is written to an encrypted S3 bucket (SSE-S3).
+### Phase 1: Data Ingestion
+- Automated collection of cryptocurrency prices (BTC, ETH, SOL) every 5 minutes
+- Secure storage of raw JSON data in an encrypted S3 bucket
+- Serverless architecture using AWS Lambda and EventBridge
 
-2. **Phase 2: Catalog & Transform**
+### Phase 2: Data Processing
+- Automated schema discovery using AWS Glue Crawler
+- Conversion of raw JSON data to optimized Parquet format
+- Partitioned storage for efficient querying
+- Data quality checks and validation
 
-   * AWS Glue Crawler discovers the JSON schema.
-   * A Glue PySpark job converts and writes partitioned Parquet files to a staging S3 bucket.
+### Phase 3: Data Analysis
+- Interactive querying using Amazon Athena
+- Real-time price monitoring and historical analysis
+- Custom visualization capabilities
 
-3. **Phase 3: Query & Visualize**
+## Project Structure
 
-   * Amazon Athena queries the Parquet data lake.
-   * (Optional) Connect QuickSight or Tableau for dashboards.
-
-## Getting Started
-
-1. **Clone the repo** and configure your AWS credentials in `.env`.
-2. **Deploy Phase 1 infra** with the CloudFormation template in `infra/`.
-3. **Develop & test** the ingestion Lambda under `src/lambda/fetch_price`.
-4. **Package & deploy** via the `scripts/build-lambda.sh` script or GitLab CI/CD pipeline.
-
-## Project Layout
-
-```text
+```
 nebula-stream/
-├── infra/        # CloudFormation templates & deploy scripts
-├── src/          # Lambda code (`fetch_price`)
-├── scripts/      # Helper scripts (build, test, deploy)
-├── data/         # Sample payloads for unit tests
-└── docs/         # Architecture diagrams and notes
+├── infra/                    # Infrastructure as Code
+│   └── nebula-stream.yml    # CloudFormation template
+│
+├── src/                      # Source code
+│   └── lambda/
+│       └── fetch_price/      # Data ingestion Lambda
+│           ├── handler.py    # Main Lambda function
+│           └── tests/        # Unit tests
+│
+├── scripts/                  # Build and deployment scripts
+├── data/                     # Sample data and test payloads
+└── docs/                     # Documentation and diagrams
 ```
 
----
+## Data Flow
 
-*Let’s build and learn together—one phase at a time!*
+1. **Collection**: Lambda function fetches price data from crypto API
+2. **Storage**: Raw JSON data stored in encrypted S3 bucket
+3. **Processing**: Glue jobs transform data to Parquet format
+4. **Analysis**: Athena queries enable data exploration
+5. **Visualization**: Optional integration with BI tools
+
+## Technology Stack
+
+- **AWS Lambda**: Serverless compute
+- **Amazon S3**: Data storage
+- **AWS Glue**: Data processing
+- **Amazon Athena**: Query engine
+- **Python**: Programming language
+- **CloudFormation**: Infrastructure as Code
+
+---

@@ -135,6 +135,80 @@ Resources:
       SourceArn:
         Fn::GetAtt: [FetchPriceSchedule, Arn]   
 
+  # Glue Database for catalog
+  NebulaStreamGlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId:
+        Ref: AWS::AccountId
+      DatabaseInput:
+        Name:
+          Fn::Sub: "nebula_stream_${Environment}_db"
+        Description: "Glue database for NebulaStream"
+
+  # IAM Role for Glue Crawler
+  NebulaStreamGlueCrawlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "nebula-stream-glue-crawler-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: GlueCrawlerS3Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - Fn::GetAtt: [NebulaStreamRawBucket, Arn]
+                  - Fn::Sub: "arn:aws:s3:::nebula-stream-raw-${Environment}-${AWS::AccountId}/*"
+              - Effect: Allow
+                Action:
+                  - glue:CreateDatabase
+                  - glue:GetDatabase
+                  - glue:UpdateDatabase
+                  - glue:CreateTable
+                  - glue:UpdateTable
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - glue:GetTable
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  # Glue Crawler for raw data
+  NebulaStreamGlueCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Name:
+        Fn::Sub: "nebula-stream-raw-crawler-${Environment}"
+      Role:
+        Fn::GetAtt: [NebulaStreamGlueCrawlerRole, Arn]
+      DatabaseName:
+        Ref: NebulaStreamGlueDatabase
+      Targets:
+        S3Targets:
+          - Path:
+              Fn::Sub: "s3://nebula-stream-raw-${Environment}-${AWS::AccountId}/"
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: DEPRECATE_IN_DATABASE
+
 Outputs:
   RawBucketName:
     Description: Name of the raw data S3 bucket
