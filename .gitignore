@@ -1,6 +1,7 @@
 # Python
 *.pyc
 __pycache__/
+.pytest_cache/
 .venv/
 
 # AWS & CloudFormation
@@ -13,3 +14,6 @@ __pycache__/
 # IDE / OS
 .DS_Store
 *.swp
+
+# Python dependencies
+src/lambda/fetch_price/vendor/

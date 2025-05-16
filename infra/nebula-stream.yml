@@ -8,6 +8,12 @@ Parameters:
   CryptoApiKey:
     Type: String
     Description: Cryptocurrency API key
+  ArtifactsBucket:
+    Type: String
+    Description: S3 bucket where lambda code artifacts are stored
+  CodeS3Key:
+    Type: String
+    Description: "S3 key (path) to the Lambda code zip file"
 
 Resources:
   NebulaStreamRawBucket:
@@ -39,6 +45,82 @@ Resources:
       DataType: text
       Value: 
         Ref: CryptoApiKey
+  
+  NebulaStreamLamdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "nebula-stream-lambda-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: NebulaStreamLambdaPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  Fn::Sub: "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/nebula-stream/${Environment}/crypto-api-key"
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource:
+                  Fn::Sub: "arn:aws:s3:::nebula-stream-raw-${Environment}-${AWS::AccountId}/*"
+                  
+  FetchPriceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: "nebula-stream-fetch-price-${Environment}"
+      Runtime: python3.9
+      Handler: handler.handler
+      Role:
+        Fn::GetAtt: [NebulaStreamLamdaRole, Arn]
+      Code:
+        S3Bucket: 
+          Ref: ArtifactsBucket
+        S3Key:
+          Ref: CodeS3Key
+      Environment:
+        Variables:
+          ENV: 
+            Ref: Environment
+          RAW_BUCKET:
+            Ref: NebulaStreamRawBucket
+          SSM_PARAMETER:
+            Fn::Sub: "/nebula-stream/${Environment}/crypto-api-key"
+              
+  # EventBridge rule to schedule  the lambda every 5 minutes
+  FetchPriceSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name:
+        Fn::Sub: "nebula-stream-fetch-schedule-${Environment}"
+      ScheduleExpression: "rate(5 minutes)"
+      State: ENABLED
+      Targets:
+        - Arn:
+            Fn::GetAtt: [FetchPriceFunction, Arn]
+          Id: "FetchPriceFunctionTarget"
+  
+  # Permission for EventBridge to invoke the lambda
+  PermissionForEvents:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName:
+        Fn::GetAtt: [FetchPriceFunction, Arn]
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt: [FetchPriceSchedule, Arn]   
 
 Outputs:
   RawBucketName:
